@@ -1,0 +1,82 @@
+<project name="MyProject" default="dist" basedir=".">
+	<description>
+    simple example build file
+  </description>
+	<property name="src" location="src" />
+	<property name="build" location="build" />
+	<property name="dist" location="dist" />
+
+	<macrodef name="git-add">
+		<attribute name="file" default="file-not-given-to-macro-git-add" />
+		<sequential>
+			<echo>git-add with @{file}</echo>
+			<exec executable="git">
+				<arg value="add" />
+				<arg value="@{file}" />
+			</exec>
+		</sequential>
+	</macrodef>
+
+	<macrodef name="git-commit">
+		<attribute name="msg" default="auto commit by ant macro git-commit" />
+		<sequential>
+			<local name="msg" />
+			<property name="msg" value="@{msg}" />
+			<echo>git-commit with ${msg}</echo>
+			<exec executable="git">
+				<arg value="commit" />
+				<arg value="-m" />
+				<arg value="@{msg}" />
+			</exec>
+		</sequential>
+	</macrodef>
+
+	<macrodef name="git-tag">
+		<attribute name="name" default="auto-tag-by-ant-macro-git-tag" />
+		<sequential>
+			<echo>git-tag with @{name}</echo>
+			<exec executable="git">
+				<arg value="tag" />
+				<arg value="@{name}" />
+			</exec>
+		</sequential>
+	</macrodef>
+
+	<macrodef name="change-version">
+		<attribute name="majorVersion" default="no-major-version-given-in-ant-task-change-version" />
+		<sequential>
+			<local name="file" />
+			<property name="file" value="${src}/pck/Version.java" />
+			<replaceregexp file="${file}" match="/\*MAJOR_VERSION_BEGIN\*/.*?/\*MAJOR_VERSION_END\*/" replace="/\*MAJOR_VERSION_BEGIN\*/@{majorVersion}/\*MAJOR_VERSION_END\*/" byline="true" />
+			<git-add file="${file}" />
+			<git-commit msg="new patch version @{majorVersion}" />
+			<git-tag name="PATCH-@{majorVersion}" />
+		</sequential>
+	</macrodef>
+
+	<target name="clean" description="clean up">
+		<delete dir="${build}" />
+		<delete dir="${dist}" />
+	</target>
+
+	<target name="init">
+		<tstamp />
+		<mkdir dir="${build}" />
+	</target>
+
+	<target name="compile" depends="init" description="compile the source">
+		<javac srcdir="${src}" destdir="${build}" />
+	</target>
+
+	<target name="dist" depends="compile" description="generate the distribution">
+		<mkdir dir="${dist}/lib" />
+
+		<jar jarfile="${dist}/lib/MyProject-${DSTAMP}.jar" basedir="${build}" />
+	</target>
+
+	<target name="preparePatchRelease" description="prepares a patch release">
+		<!-- make sure there are no uncommited changes -->
+		<!-- change version class -->
+		<change-version majorVersion="2" />
+	</target>
+</project>
